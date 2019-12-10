@@ -1,0 +1,207 @@
+
+set serveroutput on size 200000
+--Part 1. Create the database (15 marks)
+drop table Play;
+drop table Person;
+drop table Hobby;
+
+create table Person (
+	P# char(5) primary key,
+ 	Name varchar2(10),
+ 	Age int
+ 	);
+create table Hobby (
+	H# char(5) primary key,
+	Name varchar2(10)
+	);
+create table Play (
+	P# char(5),
+	H# char(5),
+	Times int,
+	primary key(P#,H#),
+	foreign key(P#) references Person(P#),
+	foreign key(H#) references Hobby(H#));
+
+--Part 2. Populate the database (15 marks) 
+insert into Person values (
+	'P1', 'Smith', 20);
+insert into Person values (
+	'P2', 'Jones', 30);
+insert into Person values (
+	'P3', 'Blake', 25);
+insert into Person values (
+	'P4', 'Lastname', 20);
+insert into Person values (
+	'P5', 'Adams', 30);
+
+insert into Hobby values （
+	'H1', 'Bowling');
+insert into Hobby values （
+	'H2', 'Chess');
+insert into Hobby values （
+	'H3', 'Dancing');
+insert into Hobby values （
+	'H4', 'Hiking');
+insert into Hobby values （
+	'H5', 'Skating');
+insert into Hobby values （
+	'H6', 'Ski');
+
+insert into Play values (
+	'P1','H1',3);
+insert into Play values (
+	'P1','H2',2);
+insert into Play values (
+	'P1','H3',4);
+insert into Play values (
+	'P1','H4',2);
+insert into Play values (
+	'P1','H5',1);
+insert into Play values (
+	'P1','H6',1);
+insert into Play values (
+	'P2','H1',3);
+insert into Play values (
+	'P2','H2',4);
+insert into Play values (
+	'P2','H3',5);
+insert into Play values (
+	'P2','H4',2);
+insert into Play values (
+	'P3','H2',2);
+insert into Play values (
+	'P3','H3',3);
+insert into Play values (
+	'P4','H2',3);
+insert into Play values (
+	'P4','H3',4);
+
+--Part 3. Query the database (70 marks) 
+--1.	Get the names of hobbies that “lastname” plays. 
+select	H.name 
+from	Person P, Hobby H, Play L
+where	P.P# = L.P# and L.H# = H.H# 
+and		P.name = 'Lastname';
+
+--2.	Get the names of persons who play Bowling. 
+select	P.name 
+from	Person P, Hobby H, Play L
+where	P.P# = L.P# and L.H# = H.H# 
+and		H.name = 'Bowling';
+
+--3.	Get the names of persons who play a hobby more than 3 times. 
+select	distinct P.name
+from	Person P, Play L
+where	P.P# = L.P# and L.Times > 3;
+
+--4.	Get the names of persons who play either chess or dancing.
+select	distinct P.name
+from	Person P, Play L, Hobby H
+where	P.P# = L.P# and L.H# = H.H# and (H.name = 'Chess' or H.name = 'Dancing');
+
+--5.	Get the names of persons who play both chess and dancing.
+select	P.name
+from	Person P, Play L1, Play L2, Hobby H1, Hobby H2
+where	P.P# = L1.P# and P.P# = L2.P# and L1.H# = H1.H# and L2.H# = H2.H# 
+and 	H1.name = 'Chess' and H2.name = 'Dancing';
+
+--6.	Get the person name/hobby name pairs such that the indicated person plays the indicated hobby. 
+select	P.name, H.name
+from	Person P, Play L, Hobby H
+where	P.P# = L.P# and L.H# = H.H#;
+
+--7.	Get the names of persons who do not play Ski.
+
+select	P.name
+from	Person P
+where	not exists 
+	(	select 	* 
+		from 	Hobby H, Play L
+		where	P.P# = L.P# and L.H# = H.H# and H.name = 'Ski');
+
+--8.	Get the names of persons who do not play any hobby. 
+select	P.name
+from	Person P
+where	not exists 
+	(	select 	* 
+		from 	Play L
+		where	P.P# = L.P# );
+
+--9.	Get the names of persons who play all hobbies. 
+select	P.name
+from	Person P
+where	not exists 
+	(	select 	* 
+		from 	Hobby H
+		where	not exists 
+			(	select	* 
+				from	Play L
+				where	P.P#=L.P# and L.H# = H.H#) );
+
+--10.	Get the names of persons who play all hobbies that “lastname” plays.
+select	P1.name
+from	Person P1
+where	P1.name != 'Lastname' and exists 
+	(	select 	* 
+		from 	Person P
+		where	P.name = 'Lastname' and not exists 
+			(	select	* 
+				from	Hobby H
+				where	exists
+					(	select 	* 
+						from 	Play L
+						where	P.P#=L.P# and L.H# = H.H#) 
+				and 	not exists
+					(	select 	* 
+						from 	Play L
+						where	P1.P#=L.P# and L.H# = H.H#)));
+
+
+--11.	Get the names of persons who play only all the hobbies that “lastname” plays.
+select	P1.name
+from	Person P1, Person P
+where	P1.name != 'Lastname' and P.name = 'Lastname' and not exists 
+	(	select	* 
+		from	Hobby H
+		where	not exists
+			(	select 	* 
+				from 	Play L, Play L1
+				where	P.P#=L.P# and L.H# = H.H# and P1.P# = L1.P# and L1.H# = H.H#)
+				and 	exists
+					(	select 	* 
+						from 	Play L
+						where	(P.P#=L.P# and L.H# = H.H#) or (P1.P# = L.P# and L.H# = H.H#)));
+
+--12.	Get the names of persons who play all hobbies except Skating and Ski.
+select  P.name
+from    Person P
+where   not exists
+    (   select  *
+        from    Hobby H
+        where   ((H.name != 'Skating' and H.name != 'Ski') or exists
+            (   select  *
+                from    Play L
+                where   P.P#=L.P# and L.H# = H.H#))
+        and     ((H.name ='Skating' or H.name = 'Ski') or not exists
+            (   select  *
+                from    Play L
+                where   P.P#=L.P# and L.H# = H.H#)));
+
+--13.	Get the names of persons who play hobbies, the number of hobbies and total number of times they play those hobbies.
+select	P.name，count(*), sum(L.times) 
+from	Person P, Play L
+where	P.P# = L.P#
+group by P.name;
+
+--14.	Get the names of persons who play hobbies but play the least number of hobbies.
+
+create table S as  
+	select	P.name，count(*) as n
+from	Person P, Play L
+where	P.P# = L.P#
+group by P.name;
+
+select	name 
+from	s
+where 	n = (select min(n) from S);
+
